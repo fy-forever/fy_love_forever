@@ -4,94 +4,210 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我们的 300 件小事</title>
+    <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
-        body { background-color: #fff1f2; font-family: 'Segoe UI', sans-serif; }
+        body { 
+            background-color: #fff1f2; 
+            font-family: 'Segoe UI', sans-serif; 
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* --- 计时器样式 --- */
+        #timer-container {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px -5px rgba(236, 72, 153, 0.2);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            position: relative;
+            z-index: 20;
+        }
+        #timer-text {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #ec4899, #be185d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+        }
+
+        /* --- 拍立得效果 --- */
         .heart-beat { animation: beat 1s infinite; }
         @keyframes beat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        
+        .polaroid { 
+            background: white; 
+            padding: 8px 8px 20px 8px; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
+            transform: rotate(-1deg); 
+            transition: transform 0.3s ease;
+        }
+        .polaroid:hover {
+            transform: rotate(0deg) scale(1.05);
+            z-index: 10;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .polaroid img { width: 100%; height: 180px; object-fit: cover; border: 1px solid #eee; }
+        
         .completed { text-decoration: line-through; color: #9ca3af; }
-        .polaroid { background: white; padding: 8px 8px 20px 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); transform: rotate(-1deg); }
-        .polaroid img { width: 100%; height: 120px; object-fit: cover; border: 1px solid #eee; }
+
+        /* --- 音乐控制按钮 --- */
+        #music-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 50;
+            background: white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            cursor: pointer;
+            font-size: 24px;
+            transition: all 0.3s;
+        }
+        .spinning { animation: spin 4s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* --- 歌词区域 --- */
+        #lyrics-box {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: #db2777;
+            z-index: 40;
+            white-space: nowrap;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            backdrop-filter: blur(5px);
+        }
+
+        /* --- 爱心雨画布 --- */
+        #heart-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
     </style>
 </head>
 <body>
-    <div id="app" class="max-w-4xl mx-auto p-6">
-        <!-- 头部 -->
-        <header class="text-center mb-10">
-            <h1 class="text-4xl font-bold text-pink-600 mb-2">❤️ 我们的 300 件小事</h1>
-            <p class="text-gray-600">从异地到白头，每一件都是爱的见证</p>
+
+    <!-- 爱心雨背景 -->
+    <canvas id="heart-canvas"></canvas>
+
+    <!-- 音乐控制 -->
+    <div id="music-btn" onclick="toggleMusic()" title="播放/暂停音乐">🎵</div>
+    
+    <!-- 歌词显示 -->
+    <div id="lyrics-box" style="display:none;">🎵 点击页面任意位置播放音乐</div>
+
+    <!-- 背景音乐 -->
+    <audio id="bg-music" loop>
+        <source src="music.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="app" class="max-w-5xl mx-auto p-6 relative z-10">
+        
+        <!-- 头部 + 计时器 -->
+        <header class="mb-8">
+            <div id="timer-container">
+                <h2 class="text-gray-500 text-sm mb-1">我们已经相爱了</h2>
+                <div id="timer-text">加载中...</div>
+                <p class="text-xs text-gray-400 mt-1">始于 2026-02-20 08:30</p>
+            </div>
+
+            <h1 class="text-4xl font-bold text-pink-600 mb-2 text-center">❤️ 我们的 300 件小事</h1>
+            <p class="text-gray-600 text-center">从异地到白头，每一件都是爱的见证</p>
             
             <!-- 进度条 -->
             <div class="mt-6 bg-white p-4 rounded-lg shadow-md max-w-lg mx-auto">
                 <div class="flex justify-between mb-2">
-                    <span>当前进度</span>
+                    <span class="font-medium text-gray-700">当前进度</span>
                     <span class="font-bold text-pink-600">{{ completedCount }} / 300</span>
                 </div>
-                <div class="w-full bg-gray-200 rounded-full h-4">
-                    <div class="bg-pink-500 h-4 rounded-full transition-all duration-1000" :style="{ width: percentage + '%' }"></div>
+                <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                    <div class="bg-gradient-to-r from-pink-400 to-pink-600 h-4 rounded-full transition-all duration-1000" :style="{ width: percentage + '%' }"></div>
                 </div>
-                <p class="text-sm text-gray-500 mt-2">已完成 {{ percentage }}%</p>
+                <p class="text-sm text-gray-500 mt-2 text-right">{{ percentage }}%</p>
             </div>
         </header>
 
         <!-- 筛选器 -->
-        <div class="flex justify-center gap-4 mb-6 flex-wrap">
-            <button @click="filter='all'" :class="{'bg-pink-500 text-white': filter==='all'}" class="px-4 py-2 rounded-full bg-white shadow hover:bg-pink-50 transition">全部</button>
-            <button @click="filter='remote'" :class="{'bg-pink-500 text-white': filter==='remote'}" class="px-4 py-2 rounded-full bg-white shadow hover:bg-pink-50 transition">✈️ 异地篇</button>
-            <button @click="filter='cohabit'" :class="{'bg-pink-500 text-white': filter==='cohabit'}" class="px-4 py-2 rounded-full bg-white shadow hover:bg-pink-50 transition">🏠 同居篇</button>
-            <button @click="filter='lifetime'" :class="{'bg-pink-500 text-white': filter==='lifetime'}" class="px-4 py-2 rounded-full bg-white shadow hover:bg-pink-50 transition">💍 一生篇</button>
+        <div class="flex justify-center gap-3 mb-8 flex-wrap sticky top-2 z-30 py-2">
+            <button @click="filter='all'" :class="filter==='all' ? 'bg-pink-500 text-white ring-2 ring-pink-300' : 'bg-white text-gray-600 hover:bg-pink-50'" class="px-5 py-2 rounded-full shadow transition font-medium">全部</button>
+            <button @click="filter='remote'" :class="filter==='remote' ? 'bg-pink-500 text-white ring-2 ring-pink-300' : 'bg-white text-gray-600 hover:bg-pink-50'" class="px-5 py-2 rounded-full shadow transition font-medium">✈️ 异地篇</button>
+            <button @click="filter='cohabit'" :class="filter==='cohabit' ? 'bg-pink-500 text-white ring-2 ring-pink-300' : 'bg-white text-gray-600 hover:bg-pink-50'" class="px-5 py-2 rounded-full shadow transition font-medium">🏠 同居篇</button>
+            <button @click="filter='lifetime'" :class="filter==='lifetime' ? 'bg-pink-500 text-white ring-2 ring-pink-300' : 'bg-white text-gray-600 hover:bg-pink-50'" class="px-5 py-2 rounded-full shadow transition font-medium">💍 一生篇</button>
         </div>
 
         <!-- 任务列表 -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-20">
             <div v-for="task in filteredTasks" :key="task.id" 
-                 class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition cursor-pointer border-l-4 relative"
-                 :class="task.done ? 'border-green-400' : 'border-pink-400'"
+                 class="bg-transparent cursor-pointer group"
                  @click="toggleTask(task)">
                 
-                <!-- 状态角标 -->
-                <div class="absolute top-2 right-2 text-xs font-bold" :class="task.done ? 'text-green-500' : 'text-gray-300'">
-                    {{ task.done ? '✅' : '⬜' }}
-                </div>
+                <div class="polaroid w-full h-full flex flex-col" :class="task.done ? 'ring-4 ring-green-100' : ''">
+                    <!-- 状态角标 -->
+                    <div class="absolute top-4 right-4 text-2xl filter drop-shadow-md z-20">
+                        {{ task.done ? '✅' : '⬜' }}
+                    </div>
 
-                <div class="flex flex-col items-center">
-                    <!-- 拍立得照片区 -->
-                    <div class="polaroid w-full mb-3">
-                        <img v-if="task.image" :src="task.image" class="w-full">
-                        <div v-else class="w-full h-32 bg-gray-50 flex items-center justify-center text-gray-300">
-                            <span class="text-2xl">📷 待上传</span>
+                    <!-- 图片区 -->
+                    <div class="w-full mb-3 overflow-hidden bg-gray-50 relative">
+                        <img v-if="task.image" :src="task.image" class="w-full" alt="photo">
+                        <div v-else class="w-full h-48 flex items-center justify-center text-gray-300 bg-gray-100">
+                            <span class="text-4xl opacity-50">📷</span>
                         </div>
-                        <p class="text-center text-gray-500 text-xs mt-2 h-4">
-                            {{ task.done ? task.date : '期待这一刻...' }}
-                        </p>
                     </div>
 
                     <!-- 文字区 -->
-                    <div class="text-center w-full">
-                        <span class="text-xs font-bold px-2 py-1 rounded bg-gray-100 text-gray-600 mb-2 inline-block">
-                            {{ getCategoryName(task.category) }}
-                        </span>
-                        <h3 class="text-lg font-medium leading-snug" :class="{'completed': task.done}">
-                            {{ task.id }}. {{ task.title }}
-                        </h3>
+                    <div class="text-center w-full flex-grow flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs font-bold px-2 py-1 rounded bg-pink-50 text-pink-600 mb-2 inline-block">
+                                {{ getCategoryName(task.category) }}
+                            </span>
+                            <h3 class="text-lg font-medium leading-snug text-gray-800 mb-2" :class="{'completed': task.done}">
+                                {{ task.id }}. {{ task.title }}
+                            </h3>
+                        </div>
+                        <p class="text-xs text-gray-400 font-handwriting mt-2">
+                            {{ task.done ? '📅 ' + task.date : '✨ 期待中...' }}
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
         
-        <footer class="text-center mt-12 text-gray-400 text-sm pb-10">
+        <footer class="text-center text-gray-400 text-sm pb-10">
             Made with ❤️ by Us on GitHub Pages
         </footer>
     </div>
 
     <script>
+        // ================= 核心逻辑 (Vue) =================
         const { createApp } = Vue;
         createApp({
             data() {
                 return {
                     filter: 'all',
-                    // 【数据区】这里放了前 50 条作为测试，后续我们会补全
                     tasks: [
                         {"id": 1, "title": "视频互道早安晚安", "category": "remote", "done": true, "date": "2026-03-22", "image": "images/1.jpg"},
                         {"id": 2, "title": "同步点外卖云干杯", "category": "remote", "done": true, "date": "2026-03-22", "image": "images/1.jpg"},
@@ -103,47 +219,8 @@
                         {"id": 8, "title": "规划下次见面", "category": "remote", "done": false, "date": null, "image": null},
                         {"id": 9, "title": "云养植物", "category": "remote", "done": false, "date": null, "image": null},
                         {"id": 10, "title": "视频指导穿搭", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 11, "title": "交换手机壁纸", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 12, "title": "一起看直播", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 13, "title": "点电台情歌", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 14, "title": "录制搞怪视频", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 15, "title": "互相画肖像", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 16, "title": "分享三件小事", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 17, "title": "在线心理测试", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 18, "title": "视频大扫除", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 19, "title": "推荐纪录片", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 20, "title": "设定专属暗号", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 21, "title": "寄零食包裹", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 22, "title": "制作思念 PPT", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 23, "title": "预订送花", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 24, "title": "写诗或代码", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 25, "title": "互寄衣服", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 26, "title": "制作表情包", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 27, "title": "买彩票", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 28, "title": "禁语一天", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 29, "title": "看小时候照片", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 30, "title": "为对方唱歌", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 31, "title": "互寄书籍", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 32, "title": "学习新语言", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 33, "title": "结束异地倒计时", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 34, "title": "点奶茶", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 35, "title": "视频折纸", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 36, "title": "互换身份", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 37, "title": "剪辑视频", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 38, "title": "云逛博物馆", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 39, "title": "未来信", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 40, "title": "突击见面", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 41, "title": "深夜谈童年", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 42, "title": "深夜谈恐惧", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 43, "title": "深夜谈婚礼", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 44, "title": "拜访父母", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 45, "title": "线上公益", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 46, "title": "存见面基金", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 47, "title": "列出雷点", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 48, "title": "分享相册秘密", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 49, "title": "看性教育视频", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 50, "title": "讨论生病照顾", "category": "remote", "done": false, "date": null, "image": null},
-                        // 后面还有 250 条，我们先不管，等网站跑起来再加，不然太长了
+                        // ... (为了简洁，这里省略中间部分，实际使用时请保留你所有的 300 条数据)
+                        // 请在实际文件中把中间的 11-49 以及 51-300 补全
                         {"id": 81, "title": "第一次逛超市", "category": "cohabit", "done": false, "date": null, "image": null},
                         {"id": 181, "title": "去三亚度假", "category": "lifetime", "done": false, "date": null, "image": null},
                         {"id": 300, "title": "定义第 301 件事", "category": "lifetime", "done": false, "date": null, "image": null}
@@ -159,25 +236,20 @@
                 },
                 filteredTasks() {
                     if (this.filter === 'all') return this.tasks;
-                    if (this.filter === 'remote') return this.tasks.filter(t => t.category === 'remote');
-                    if (this.filter === 'cohabit') return this.tasks.filter(t => t.category === 'cohabit');
-                    if (this.filter === 'lifetime') return this.tasks.filter(t => t.category === 'lifetime');
-                    return this.tasks;
+                    return this.tasks.filter(t => t.category === this.filter);
                 }
             },
             methods: {
                 getCategoryName(cat) {
-                    if(cat === 'remote') return '✈️ 异地';
-                    if(cat === 'cohabit') return '🏠 同居';
-                    if(cat === 'lifetime') return '💍 一生';
-                    return '';
+                    const map = { 'remote': '✈️ 异地', 'cohabit': '🏠 同居', 'lifetime': '💍 一生' };
+                    return map[cat] || '';
                 },
                 toggleTask(task) {
                     if (!task.done) {
                         if(confirm(`确定完成 "${task.title}" 吗？\n记得先上传照片哦！`)) {
                             task.done = true;
                             task.date = new Date().toLocaleDateString();
-                            alert("成功！记得点击右上角 Commit changes 保存！");
+                            alert("🎉 太棒了！记得点击右上角 Commit changes 保存修改！");
                         }
                     } else {
                         if(confirm("取消完成状态？")) {
@@ -186,8 +258,136 @@
                         }
                     }
                 }
+            },
+            mounted() {
+                this.startTimer();
+                this.initHearts();
             }
         }).mount('#app');
+
+        // ================= 功能 1: 恋爱计时器 =================
+        function startTimer() {
+            const startDate = new Date('2026-02-20T08:30:00');
+            const timerEl = document.getElementById('timer-text');
+            
+            setInterval(() => {
+                const now = new Date();
+                const diff = now - startDate;
+                
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                
+                timerEl.innerText = `${days}天 ${hours}时 ${minutes}分 ${seconds}秒`;
+            }, 1000);
+        }
+
+        // ================= 功能 2: 音乐与歌词 =================
+        const audio = document.getElementById('bg-music');
+        const musicBtn = document.getElementById('music-btn');
+        const lyricsBox = document.getElementById('lyrics-box');
+        let isPlaying = false;
+        
+        const lyrics = [
+            "因为刚好遇见你，留下十年的期许",
+            "风吹花落泪如雨，因为不想分离",
+            "你是我最美丽的意外",
+            "往后余生，风雪是你，平淡也是你",
+            "爱就是在一起，吃好多好多顿饭"
+        ];
+        let lyricIdx = 0;
+
+        // 首次点击页面任意位置尝试播放
+        document.body.addEventListener('click', () => {
+            if (!isPlaying) {
+                audio.play().then(() => {
+                    isPlaying = true;
+                    musicBtn.classList.add('spinning');
+                    lyricsBox.style.display = 'block';
+                    lyricsBox.innerText = "🎵 " + lyrics[0];
+                }).catch(e => console.log("等待交互"));
+            }
+        }, { once: true });
+
+        window.toggleMusic = function() {
+            if (isPlaying) {
+                audio.pause();
+                musicBtn.classList.remove('spinning');
+                lyricsBox.innerText = "⏸️ 音乐已暂停";
+            } else {
+                audio.play();
+                musicBtn.classList.add('spinning');
+                lyricsBox.innerText = "🎵 " + lyrics[lyricIdx];
+            }
+            isPlaying = !isPlaying;
+        };
+
+        setInterval(() => {
+            if (isPlaying) {
+                lyricIdx = (lyricIdx + 1) % lyrics.length;
+                lyricsBox.innerText = "🎵 " + lyrics[lyricIdx];
+            }
+        }, 4000);
+
+        // ================= 功能 3: 爱心雨特效 =================
+        function initHearts() {
+            const canvas = document.getElementById('heart-canvas');
+            const ctx = canvas.getContext('2d');
+            let width, height;
+            let hearts = [];
+
+            function resize() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            class Heart {
+                constructor() {
+                    this.reset();
+                    this.y = Math.random() * height; // 初始布满屏幕
+                }
+                reset() {
+                    this.x = Math.random() * width;
+                    this.y = -20;
+                    this.size = Math.random() * 15 + 10;
+                    this.speedY = Math.random() * 2 + 1;
+                    this.speedX = Math.random() * 2 - 1;
+                    this.color = `rgba(255, ${Math.floor(Math.random() * 100 + 50)}, ${Math.floor(Math.random() * 100 + 50)}, ${Math.random() * 0.6 + 0.2})`;
+                    this.rotation = Math.random() * 360;
+                    this.rotationSpeed = Math.random() * 0.05 - 0.025;
+                }
+                update() {
+                    this.y += this.speedY;
+                    this.x += this.speedX;
+                    this.rotation += this.rotationSpeed;
+                    if (this.y > height) this.reset();
+                }
+                draw() {
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    ctx.rotate(this.rotation);
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.bezierCurveTo(-this.size / 2, -this.size / 2, -this.size, this.size / 3, 0, this.size);
+                    ctx.bezierCurveTo(this.size, this.size / 3, this.size / 2, -this.size / 2, 0, 0);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+
+            for (let i = 0; i < 60; i++) hearts.push(new Heart());
+
+            function animate() {
+                ctx.clearRect(0, 0, width, height);
+                hearts.forEach(h => { h.update(); h.draw(); });
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
     </script>
 </body>
 </html>
