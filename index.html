@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我们的 300 件小事</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        body { background-color: #fff1f2; font-family: 'Segoe UI', sans-serif; }
+        .heart-beat { animation: beat 1s infinite; }
+        @keyframes beat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .completed { text-decoration: line-through; color: #9ca3af; }
+        .polaroid { background: white; padding: 8px 8px 20px 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); transform: rotate(-1deg); }
+        .polaroid img { width: 100%; height: 120px; object-fit: cover; border: 1px solid #eee; }
+    </style>
+</head>
+<body>
+    <div id="app" class="max-w-4xl mx-auto p-6">
+        <!-- 头部 -->
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-bold text-pink-600 mb-2">❤️ 我们的 300 件小事</h1>
+            <p class="text-gray-600">从异地到白头，每一件都是爱的见证</p>
+            
+            <!-- 进度条 -->
+            <div class="mt-6 bg-white p-4 rounded-lg shadow-md max-w-lg mx-auto">
+                <div class="flex justify-between mb-2">
+                    <span>当前进度</span>
+                    <span class="font-bold text-pink-600">{{ completedCount }} / 300</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4">
+                    <div class="bg-pink-500 h-4 rounded-full transition-all duration-1000" :style="{ width: percentage + '%' }"></div>
+                </div>
+                <p class="text-sm text-gray-500 mt-2">已完成 {{ percentage }}%</p>
+            </div>
+        </header>
+
+        <!-- 筛选器 -->
+        <div class="flex justify-center gap-4 mb-6 flex-wrap">
+            <button @click="filter='all'" :class="{'bg-pink-500 text-white': filter==='all'}" class="px-4 py-2 rounded-full bg-white shadow hover:bg-pink-50 transition">全部</button>
+            <button @click="filter='remote'" :class="{'bg-pink-500 text-white': filter==='remote'}" class="px-4 py-2 rounded-full bg-white shadow hover:bg-pink-50 transition">✈️ 异地篇</button>
+            <button @click="filter='cohabit'" :class="{'bg-pink-500 text-white': filter==='cohabit'}" class="px-4 py-2 rounded-full bg-white shadow hover:bg-pink-50 transition">🏠 同居篇</button>
+            <button @click="filter='lifetime'" :class="{'bg-pink-500 text-white': filter==='lifetime'}" class="px-4 py-2 rounded-full bg-white shadow hover:bg-pink-50 transition">💍 一生篇</button>
+        </div>
+
+        <!-- 任务列表 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div v-for="task in filteredTasks" :key="task.id" 
+                 class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition cursor-pointer border-l-4 relative"
+                 :class="task.done ? 'border-green-400' : 'border-pink-400'"
+                 @click="toggleTask(task)">
+                
+                <!-- 状态角标 -->
+                <div class="absolute top-2 right-2 text-xs font-bold" :class="task.done ? 'text-green-500' : 'text-gray-300'">
+                    {{ task.done ? '✅' : '⬜' }}
+                </div>
+
+                <div class="flex flex-col items-center">
+                    <!-- 拍立得照片区 -->
+                    <div class="polaroid w-full mb-3">
+                        <img v-if="task.image" :src="task.image" class="w-full">
+                        <div v-else class="w-full h-32 bg-gray-50 flex items-center justify-center text-gray-300">
+                            <span class="text-2xl">📷 待上传</span>
+                        </div>
+                        <p class="text-center text-gray-500 text-xs mt-2 h-4">
+                            {{ task.done ? task.date : '期待这一刻...' }}
+                        </p>
+                    </div>
+
+                    <!-- 文字区 -->
+                    <div class="text-center w-full">
+                        <span class="text-xs font-bold px-2 py-1 rounded bg-gray-100 text-gray-600 mb-2 inline-block">
+                            {{ getCategoryName(task.category) }}
+                        </span>
+                        <h3 class="text-lg font-medium leading-snug" :class="{'completed': task.done}">
+                            {{ task.id }}. {{ task.title }}
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer class="text-center mt-12 text-gray-400 text-sm pb-10">
+            Made with ❤️ by Us on GitHub Pages
+        </footer>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+        createApp({
+            data() {
+                return {
+                    filter: 'all',
+                    // 【数据区】这里放了前 50 条作为测试，后续我们会补全
+                    tasks: [
+                        {"id": 1, "title": "视频互道早安晚安", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 2, "title": "同步点外卖云干杯", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 3, "title": "共享一个歌单", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 4, "title": "睡前读故事", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 5, "title": "同步看电影", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 6, "title": "互寄手写信", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 7, "title": "玩线上双人游戏", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 8, "title": "规划下次见面", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 9, "title": "云养植物", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 10, "title": "视频指导穿搭", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 11, "title": "交换手机壁纸", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 12, "title": "一起看直播", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 13, "title": "点电台情歌", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 14, "title": "录制搞怪视频", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 15, "title": "互相画肖像", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 16, "title": "分享三件小事", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 17, "title": "在线心理测试", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 18, "title": "视频大扫除", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 19, "title": "推荐纪录片", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 20, "title": "设定专属暗号", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 21, "title": "寄零食包裹", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 22, "title": "制作思念 PPT", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 23, "title": "预订送花", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 24, "title": "写诗或代码", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 25, "title": "互寄衣服", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 26, "title": "制作表情包", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 27, "title": "买彩票", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 28, "title": "禁语一天", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 29, "title": "看小时候照片", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 30, "title": "为对方唱歌", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 31, "title": "互寄书籍", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 32, "title": "学习新语言", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 33, "title": "结束异地倒计时", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 34, "title": "点奶茶", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 35, "title": "视频折纸", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 36, "title": "互换身份", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 37, "title": "剪辑视频", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 38, "title": "云逛博物馆", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 39, "title": "未来信", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 40, "title": "突击见面", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 41, "title": "深夜谈童年", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 42, "title": "深夜谈恐惧", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 43, "title": "深夜谈婚礼", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 44, "title": "拜访父母", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 45, "title": "线上公益", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 46, "title": "存见面基金", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 47, "title": "列出雷点", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 48, "title": "分享相册秘密", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 49, "title": "看性教育视频", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 50, "title": "讨论生病照顾", "category": "remote", "done": false, "date": null, "image": null},
+                        // 后面还有 250 条，我们先不管，等网站跑起来再加，不然太长了
+                        {"id": 81, "title": "第一次逛超市", "category": "cohabit", "done": false, "date": null, "image": null},
+                        {"id": 181, "title": "去三亚度假", "category": "lifetime", "done": false, "date": null, "image": null},
+                        {"id": 300, "title": "定义第 301 件事", "category": "lifetime", "done": false, "date": null, "image": null}
+                    ]
+                }
+            },
+            computed: {
+                completedCount() {
+                    return this.tasks.filter(t => t.done).length;
+                },
+                percentage() {
+                    return Math.round((this.completedCount / 300) * 100);
+                },
+                filteredTasks() {
+                    if (this.filter === 'all') return this.tasks;
+                    if (this.filter === 'remote') return this.tasks.filter(t => t.category === 'remote');
+                    if (this.filter === 'cohabit') return this.tasks.filter(t => t.category === 'cohabit');
+                    if (this.filter === 'lifetime') return this.tasks.filter(t => t.category === 'lifetime');
+                    return this.tasks;
+                }
+            },
+            methods: {
+                getCategoryName(cat) {
+                    if(cat === 'remote') return '✈️ 异地';
+                    if(cat === 'cohabit') return '🏠 同居';
+                    if(cat === 'lifetime') return '💍 一生';
+                    return '';
+                },
+                toggleTask(task) {
+                    if (!task.done) {
+                        if(confirm(`确定完成 "${task.title}" 吗？\n记得先上传照片哦！`)) {
+                            task.done = true;
+                            task.date = new Date().toLocaleDateString();
+                            alert("成功！记得点击右上角 Commit changes 保存！");
+                        }
+                    } else {
+                        if(confirm("取消完成状态？")) {
+                            task.done = false;
+                            task.date = null;
+                        }
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
