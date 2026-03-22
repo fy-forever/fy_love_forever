@@ -18,7 +18,7 @@
 
         /* --- 计时器样式 --- */
         #timer-container {
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(10px);
             border-radius: 1rem;
             box-shadow: 0 10px 25px -5px rgba(236, 72, 153, 0.2);
@@ -27,6 +27,7 @@
             text-align: center;
             position: relative;
             z-index: 20;
+            border: 1px solid rgba(255,255,255,0.5);
         }
         #timer-text {
             font-size: 2rem;
@@ -36,6 +37,7 @@
             -webkit-text-fill-color: transparent;
             font-family: 'Courier New', monospace;
             letter-spacing: 2px;
+            min-height: 2.5rem; /* 防止抖动 */
         }
 
         /* --- 拍立得效果 --- */
@@ -47,12 +49,12 @@
             padding: 8px 8px 20px 8px; 
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
             transform: rotate(-1deg); 
-            transition: transform 0.3s ease;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
         .polaroid:hover {
             transform: rotate(0deg) scale(1.05);
             z-index: 10;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
         }
         .polaroid img { width: 100%; height: 180px; object-fit: cover; border: 1px solid #eee; }
         
@@ -75,6 +77,12 @@
             cursor: pointer;
             font-size: 24px;
             transition: all 0.3s;
+            opacity: 0; /* 初始隐藏，播放后显示 */
+            pointer-events: none;
+        }
+        #music-btn.visible {
+            opacity: 1;
+            pointer-events: auto;
         }
         .spinning { animation: spin 4s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
@@ -94,6 +102,8 @@
             white-space: nowrap;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             backdrop-filter: blur(5px);
+            display: none;
+            transition: opacity 0.5s;
         }
 
         /* --- 爱心雨画布 --- */
@@ -117,11 +127,12 @@
     <div id="music-btn" onclick="toggleMusic()" title="播放/暂停音乐">🎵</div>
     
     <!-- 歌词显示 -->
-    <div id="lyrics-box" style="display:none;">🎵 点击页面任意位置播放音乐</div>
+    <div id="lyrics-box">🎵 点击页面任意位置播放音乐</div>
 
-    <!-- 背景音乐 -->
+    <!-- 背景音乐 (请确保上传了 music.mp3) -->
     <audio id="bg-music" loop>
         <source src="music.mp3" type="audio/mpeg">
+        您的浏览器不支持音频元素。
     </audio>
 
     <div id="app" class="max-w-5xl mx-auto p-6 relative z-10">
@@ -130,7 +141,7 @@
         <header class="mb-8">
             <div id="timer-container">
                 <h2 class="text-gray-500 text-sm mb-1">我们已经相爱了</h2>
-                <div id="timer-text">加载中...</div>
+                <div id="timer-text">计算中...</div>
                 <p class="text-xs text-gray-400 mt-1">始于 2026-02-20 08:30</p>
             </div>
 
@@ -172,7 +183,7 @@
 
                     <!-- 图片区 -->
                     <div class="w-full mb-3 overflow-hidden bg-gray-50 relative">
-                        <img v-if="task.image" :src="task.image" class="w-full" alt="photo">
+                        <img v-if="task.image" :src="task.image" class="w-full" alt="photo" onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
                         <div v-else class="w-full h-48 flex items-center justify-center text-gray-300 bg-gray-100">
                             <span class="text-4xl opacity-50">📷</span>
                         </div>
@@ -202,77 +213,21 @@
     </div>
 
     <script>
-        // ================= 核心逻辑 (Vue) =================
-        const { createApp } = Vue;
-        createApp({
-            data() {
-                return {
-                    filter: 'all',
-                    tasks: [
-                        {"id": 1, "title": "视频互道早安晚安", "category": "remote", "done": true, "date": "2026-03-22", "image": "images/1.jpg"},
-                        {"id": 2, "title": "同步点外卖云干杯", "category": "remote", "done": true, "date": "2026-03-22", "image": "images/1.jpg"},
-                        {"id": 3, "title": "共享一个歌单", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 4, "title": "睡前读故事", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 5, "title": "同步看电影", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 6, "title": "互寄手写信", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 7, "title": "玩线上双人游戏", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 8, "title": "规划下次见面", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 9, "title": "云养植物", "category": "remote", "done": false, "date": null, "image": null},
-                        {"id": 10, "title": "视频指导穿搭", "category": "remote", "done": false, "date": null, "image": null},
-                        // ... (为了简洁，这里省略中间部分，实际使用时请保留你所有的 300 条数据)
-                        // 请在实际文件中把中间的 11-49 以及 51-300 补全
-                        {"id": 81, "title": "第一次逛超市", "category": "cohabit", "done": false, "date": null, "image": null},
-                        {"id": 181, "title": "去三亚度假", "category": "lifetime", "done": false, "date": null, "image": null},
-                        {"id": 300, "title": "定义第 301 件事", "category": "lifetime", "done": false, "date": null, "image": null}
-                    ]
-                }
-            },
-            computed: {
-                completedCount() {
-                    return this.tasks.filter(t => t.done).length;
-                },
-                percentage() {
-                    return Math.round((this.completedCount / 300) * 100);
-                },
-                filteredTasks() {
-                    if (this.filter === 'all') return this.tasks;
-                    return this.tasks.filter(t => t.category === this.filter);
-                }
-            },
-            methods: {
-                getCategoryName(cat) {
-                    const map = { 'remote': '✈️ 异地', 'cohabit': '🏠 同居', 'lifetime': '💍 一生' };
-                    return map[cat] || '';
-                },
-                toggleTask(task) {
-                    if (!task.done) {
-                        if(confirm(`确定完成 "${task.title}" 吗？\n记得先上传照片哦！`)) {
-                            task.done = true;
-                            task.date = new Date().toLocaleDateString();
-                            alert("🎉 太棒了！记得点击右上角 Commit changes 保存修改！");
-                        }
-                    } else {
-                        if(confirm("取消完成状态？")) {
-                            task.done = false;
-                            task.date = null;
-                        }
-                    }
-                }
-            },
-            mounted() {
-                this.startTimer();
-                this.initHearts();
-            }
-        }).mount('#app');
-
-        // ================= 功能 1: 恋爱计时器 =================
-        function startTimer() {
+        // ================= 功能 1: 恋爱计时器 (独立运行，不依赖 Vue) =================
+        function initTimer() {
             const startDate = new Date('2026-02-20T08:30:00');
             const timerEl = document.getElementById('timer-text');
             
-            setInterval(() => {
+            if (!timerEl) return;
+
+            function update() {
                 const now = new Date();
                 const diff = now - startDate;
+                
+                if (diff < 0) {
+                    timerEl.innerText = "期待那一刻...";
+                    return;
+                }
                 
                 const days = Math.floor(diff / (1000 * 60 * 60 * 24));
                 const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -280,8 +235,14 @@
                 const seconds = Math.floor((diff % (1000 * 60)) / 1000);
                 
                 timerEl.innerText = `${days}天 ${hours}时 ${minutes}分 ${seconds}秒`;
-            }, 1000);
+            }
+            
+            update(); // 立即执行一次
+            setInterval(update, 1000); // 每秒更新
         }
+
+        // 页面加载完成后立即启动计时器
+        window.addEventListener('DOMContentLoaded', initTimer);
 
         // ================= 功能 2: 音乐与歌词 =================
         const audio = document.getElementById('bg-music');
@@ -300,17 +261,23 @@
 
         // 首次点击页面任意位置尝试播放
         document.body.addEventListener('click', () => {
-            if (!isPlaying) {
+            if (!isPlaying && audio) {
                 audio.play().then(() => {
                     isPlaying = true;
-                    musicBtn.classList.add('spinning');
+                    musicBtn.classList.add('visible', 'spinning');
                     lyricsBox.style.display = 'block';
                     lyricsBox.innerText = "🎵 " + lyrics[0];
-                }).catch(e => console.log("等待交互"));
+                }).catch(e => {
+                    console.log("自动播放被拦截，需手动点击音符按钮");
+                    musicBtn.classList.add('visible');
+                    lyricsBox.style.display = 'block';
+                    lyricsBox.innerText = "🎵 点击右上角音符播放";
+                });
             }
         }, { once: true });
 
         window.toggleMusic = function() {
+            if (!audio) return;
             if (isPlaying) {
                 audio.pause();
                 musicBtn.classList.remove('spinning');
@@ -333,6 +300,7 @@
         // ================= 功能 3: 爱心雨特效 =================
         function initHearts() {
             const canvas = document.getElementById('heart-canvas');
+            if (!canvas) return;
             const ctx = canvas.getContext('2d');
             let width, height;
             let hearts = [];
@@ -347,7 +315,7 @@
             class Heart {
                 constructor() {
                     this.reset();
-                    this.y = Math.random() * height; // 初始布满屏幕
+                    this.y = Math.random() * height;
                 }
                 reset() {
                     this.x = Math.random() * width;
@@ -388,6 +356,73 @@
             }
             animate();
         }
+
+        // ================= Vue 应用逻辑 =================
+        const { createApp } = Vue;
+        
+        createApp({
+            data() {
+                return {
+                    filter: 'all',
+                    // ⚠️ 重要：请在这里维护你的任务列表！
+                    // 如果之前的任务丢了，请把原来的数据复制回来替换下面这个数组
+                    tasks: [
+                        {"id": 1, "title": "视频互道早安晚安", "category": "remote", "done": true, "date": "2026-03-22", "image": "images/1.jpg"},
+                        {"id": 2, "title": "同步点外卖云干杯", "category": "remote", "done": true, "date": "2026-03-22", "image": "images/1.jpg"},
+                        {"id": 3, "title": "共享一个歌单", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 4, "title": "睡前读故事", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 5, "title": "同步看电影", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 6, "title": "互寄手写信", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 7, "title": "玩线上双人游戏", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 8, "title": "规划下次见面", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 9, "title": "云养植物", "category": "remote", "done": false, "date": null, "image": null},
+                        {"id": 10, "title": "视频指导穿搭", "category": "remote", "done": false, "date": null, "image": null},
+                        // 👇 请在此处继续添加你的任务，或者把之前的 300 条数据粘贴进来 👇
+                        {"id": 81, "title": "第一次逛超市", "category": "cohabit", "done": false, "date": null, "image": null},
+                        {"id": 181, "title": "去三亚度假", "category": "lifetime", "done": false, "date": null, "image": null},
+                        {"id": 300, "title": "定义第 301 件事", "category": "lifetime", "done": false, "date": null, "image": null}
+                    ]
+                }
+            },
+            computed: {
+                completedCount() {
+                    return this.tasks.filter(t => t.done).length;
+                },
+                percentage() {
+                    // 防止除以 0，如果总数不是 300，这里可以动态计算
+                    const total = 300; 
+                    return Math.round((this.completedCount / total) * 100);
+                },
+                filteredTasks() {
+                    if (this.filter === 'all') return this.tasks;
+                    return this.tasks.filter(t => t.category === this.filter);
+                }
+            },
+            methods: {
+                getCategoryName(cat) {
+                    const map = { 'remote': '✈️ 异地', 'cohabit': '🏠 同居', 'lifetime': '💍 一生' };
+                    return map[cat] || '';
+                },
+                toggleTask(task) {
+                    if (!task.done) {
+                        if(confirm(`确定完成 "${task.title}" 吗？\n记得先上传照片哦！`)) {
+                            task.done = true;
+                            task.date = new Date().toLocaleDateString();
+                            alert("🎉 太棒了！记得点击右上角 Commit changes 保存修改！");
+                        }
+                    } else {
+                        if(confirm("取消完成状态？")) {
+                            task.done = false;
+                            task.date = null;
+                        }
+                    }
+                }
+            },
+            mounted() {
+                // 启动爱心雨
+                initHearts();
+            }
+        }).mount('#app');
     </script>
 </body>
 </html>
